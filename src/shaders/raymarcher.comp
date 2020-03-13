@@ -25,8 +25,12 @@ struct material
   float transparency;
 };
 
-#define MAX_RAY_STEPS 10
-#define MINIMUM_DISTANCE 0.001
+#define MAX_RAY_STEPS 100
+#define MINIMUM_DISTANCE 0.0001
+#define ITERATIONS 200
+#define SCALE 2.0
+#define BAILOUT 2.0
+#define POWER 8.0
 
 #define FLOAT_COMPARISON_PRECISION 0.0001
 
@@ -69,15 +73,56 @@ vec3 getRayPos(rayObj ray, float t)
   return ray.ori + ray.dir * t;
 }
 
-float sphereDistanceEst(vec3 point)
+float mandelbulbDistanceEst(vec3 pos) {
+	vec3 z = pos;
+	float dr = 1.0;
+	float r = 0.0;
+	for (int i = 0; i < ITERATIONS ; i++) {
+		r = length(z);
+		if (r>BAILOUT) break;
+		
+		// convert to polar coordinates
+		float theta = acos(z.z/r);
+		float phi = atan(z.y,z.x);
+		dr =  pow(r, POWER - 1.0)*POWER*dr + 1.0;
+		
+		// scale and rotate the point
+		float zr = pow(r, POWER);
+		theta = theta*POWER;
+		phi = phi*POWER;
+		
+		// convert back to cartesian coordinates
+		z = zr*vec3(sin(theta)*cos(phi), sin(phi)*sin(theta), cos(theta));
+		z+=pos;
+	}
+	return 0.5*log(r)*r/dr;
+}
+
+float sierpinskiDistanceEst(vec3 z)
 {
-  return max(0.0, length(point)-1.0);
+    float r;
+    int n = 0;
+    while (n < ITERATIONS) {
+       if(z.x+z.y<0) z.xy = -z.yx; // fold 1
+       if(z.x+z.z<0) z.xz = -z.zx; // fold 2
+       if(z.y+z.z<0) z.zy = -z.yz; // fold 3	
+       z = z*SCALE - vec3(1,1,1)*(SCALE-1.0);
+       n++;
+    }
+    return (length(z) ) * pow(SCALE, -float(n));
+}
+
+float sphereDistanceEst(vec3 p)
+{
+  //return max(0.0, length(point)-1.0);
+  p.xy = vec2(mod(p.x, 1.0), mod(p.y, 1.0)) - 0.5;
+  return length(p)-0.3;
 }
 
 float trace(rayObj ray) {
   int steps;
 	for (steps = 0; steps < MAX_RAY_STEPS; steps++) {
-		float distance = sphereDistanceEst(ray.ori);
+		float distance = mandelbulbDistanceEst(ray.ori);
 		ray.ori += distance * ray.dir;
 		if (distance < MINIMUM_DISTANCE) 
       break;

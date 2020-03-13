@@ -12,7 +12,6 @@
 #include "SDL_opengl.h"
 
 #include "FileHandler.h"
-#include "Object.h"
 
 class ComputeShader
 {
@@ -47,9 +46,6 @@ public:
 	void setMat2(const std::string& name, const glm::mat2& mat) const;
 	void setMat3(const std::string& name, const glm::mat3& mat) const;
 	void setMat4(const std::string& name, const glm::mat4& mat) const;
-
-	void setObject(std::string &name, const shaderObject objs);
-	void setObjects(const std::string &name, std::vector<shaderObject>& objs);
 private:
 	void printIVSuccess(unsigned int shader, GLenum status);
 };

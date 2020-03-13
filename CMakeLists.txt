@@ -1,5 +1,5 @@
 ###########################################################################
-### Example CMake Setup demonstrating libraries and header-only projects" #
+### Fractal Raymarching using OpenGL Compute Shaders #
 ###########################################################################
 # Includes a bunch of macros for improving IDE compatability, mainly focused on Windows Visual Studios"
 # Supports a shaders/ folder in src/ as well as an assets/ folder in the repo, which are both copied/symlinked next to the exe
@@ -18,7 +18,7 @@ cmake_minimum_required(VERSION 3.10)
 project(gpu-pathtracer
     LANGUAGES C CXX
     VERSION 1.0.0
-    DESCRIPTION "GPU Compute Shader Pathtracer"
+    DESCRIPTION "GPU Fractal Raymarching"
 )
 
 # Compiler flags

@@ -25,6 +25,11 @@ struct material
   float transparency;
 };
 
+#define MAX_RAY_STEPS 10
+#define MINIMUM_DISTANCE 0.001
+
+#define FLOAT_COMPARISON_PRECISION 0.0001
+
 //Support structs
 struct rayObj
 {
@@ -39,8 +44,6 @@ struct hitRecord
   material mat;
   vec3 normal;
 };
-
-#define FLOAT_COMPARISON_PRECISION 0.0001
 
 bool fuzzy_equals(float a, float b)
 {
@@ -66,6 +69,22 @@ vec3 getRayPos(rayObj ray, float t)
   return ray.ori + ray.dir * t;
 }
 
+float sphereDistanceEst(vec3 point)
+{
+  return max(0.0, length(point)-1.0);
+}
+
+float trace(rayObj ray) {
+  int steps;
+	for (steps = 0; steps < MAX_RAY_STEPS; steps++) {
+		float distance = sphereDistanceEst(ray.ori);
+		ray.ori += distance * ray.dir;
+		if (distance < MINIMUM_DISTANCE) 
+      break;
+	}
+	return 1.0 - float(steps)/float(MAX_RAY_STEPS);
+}
+
 layout (local_size_x = 16, local_size_y = 8) in;
 void main(void) {
   ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
@@ -76,6 +95,6 @@ void main(void) {
   vec2 pos = vec2(pix) / vec2(size.x - 1, size.y - 1);
   vec3 dir = normalize(mix(mix(ray00, ray01, pos.y), mix(ray10, ray11, pos.y), pos.x));
   rayObj ray = rayObj(dir, eye);
-  vec4 color = vec4(0.0, 1.0, 0.0, 1.0);//trace(ray);
+  vec4 color = vec4(vec3(trace(ray)), 1.0);
   imageStore(framebuffer, pix, color);
 }

@@ -56,18 +56,18 @@ void Renderer::initRasterizer()
 
 void Renderer::drawPathTracer()
 {
-	pathTracerComputeShader.use();
+	rayMarcherComputeShader.use();
 
-	int framebufferTexLocation = glGetUniformLocation(pathTracerComputeShader.ID, "framebuffer");
-	int skyBoxTexLocation = glGetUniformLocation(pathTracerComputeShader.ID, "skybox");
+	int framebufferTexLocation = glGetUniformLocation(rayMarcherComputeShader.ID, "framebuffer");
+	int skyBoxTexLocation = glGetUniformLocation(rayMarcherComputeShader.ID, "skybox");
 	glUniform1i(framebufferTexLocation, 0);
 	glUniform1i(skyBoxTexLocation, 1);
 	//Set corner ray uniforms to give the program the view
-	pathTracerComputeShader.setVec3("eye", camera.getPosition());
-	pathTracerComputeShader.setVec3("ray00", camera.ray00);
-	pathTracerComputeShader.setVec3("ray10", camera.ray10);
-	pathTracerComputeShader.setVec3("ray01", camera.ray01);
-	pathTracerComputeShader.setVec3("ray11", camera.ray11);
+	rayMarcherComputeShader.setVec3("eye", camera.getPosition());
+	rayMarcherComputeShader.setVec3("ray00", camera.ray00);
+	rayMarcherComputeShader.setVec3("ray10", camera.ray10);
+	rayMarcherComputeShader.setVec3("ray01", camera.ray01);
+	rayMarcherComputeShader.setVec3("ray11", camera.ray11);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, textureOutput);
@@ -154,7 +154,7 @@ void Renderer::initPathTracer()
 	//Screen Texture
 	//stbi_set_flip_vertically_on_load(true);
 	screenTextureShader = Shader("shaders/screentexture.vert", "shaders/screentexture.frag");
-	pathTracerComputeShader = ComputeShader("shaders/pathtracer.comp");
+	rayMarcherComputeShader = ComputeShader("shaders/raymarcher.comp");
 
 	//Compute shader
 	// dimensions of the image
@@ -197,7 +197,7 @@ void Renderer::requestShaderReload()
 {
 	switch (renderType)
 	{
-	case PathTracer: pathTracerComputeShader.reload(); break;
+	case PathTracer: rayMarcherComputeShader.reload(); break;
 	case Rasterizer: rasterizerShader.reload(); break;
 	}
 }

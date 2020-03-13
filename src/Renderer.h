@@ -71,7 +71,7 @@ public:
 
 private:
     Shader screenTextureShader, rasterizerShader;
-	ComputeShader pathTracerComputeShader;
+	ComputeShader rayMarcherComputeShader;
     SDL_Window *window;
 	std::vector<GeometryVBO> geometryVBOs;
 

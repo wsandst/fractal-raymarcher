@@ -30,7 +30,7 @@ void Renderer::render()
 
 	switch (renderType)
 	{
-		case PathTracer: drawPathTracer(); break;
+		case Raymarcher: drawPathTracer(); break;
 		case Rasterizer: drawRasterizer(); break;
 	}
 
@@ -69,6 +69,12 @@ void Renderer::drawPathTracer()
 	rayMarcherComputeShader.setVec3("ray01", camera.ray01);
 	rayMarcherComputeShader.setVec3("ray11", camera.ray11);
 
+	//Raymarching variables
+	rayMarcherComputeShader.setFloat("BAILOUT", bailout);
+	rayMarcherComputeShader.setFloat("POWER", power);
+	rayMarcherComputeShader.setFloat("ITERATIONS", iterations);
+	rayMarcherComputeShader.setFloat("MAX_RAY_STEPS", maxRaySteps);
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, textureOutput);
 
@@ -76,7 +82,7 @@ void Renderer::drawPathTracer()
 	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
 
 	 // launch compute shaders!
-	glDispatchCompute((GLuint)windowWidth, (GLuint)windowHeight, 1);
+	glDispatchCompute((GLuint)windowWidth*MSAALevel, (GLuint)windowHeight*MSAALevel, 1);
 	
 	// make sure writing to image has finished before read
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -90,13 +96,13 @@ void Renderer::drawPathTracer()
 
 void Renderer::init()
 {
-	camera = Camera(windowWidth, windowHeight);
+	camera = Camera(windowWidth*MSAALevel, windowHeight*MSAALevel);
 
 	initSDL();
 	initOpenGL();
 	switch (renderType)
 	{
-	case PathTracer: initPathTracer(); break;
+	case Raymarcher: initPathTracer(); break;
 	case Rasterizer: initRasterizer(); break;
 	}
 }
@@ -136,6 +142,11 @@ void Renderer::initSDL()
 	screenResHeight = DM.h;
 	screenResWidth = DM.w;
 
+	//Antialiasing
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, MSAALevel*MSAALevel);
+	glEnable(GL_MULTISAMPLE);
+
 	window = SDL_CreateWindow(windowTitle, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
 	
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -165,7 +176,7 @@ void Renderer::initPathTracer()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, windowWidth, windowHeight, 0, GL_RGBA, GL_FLOAT,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, windowWidth*MSAALevel, windowHeight*MSAALevel, 0, GL_RGBA, GL_FLOAT,
 		NULL);
 	glBindImageTexture(0, textureOutput, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
@@ -197,7 +208,7 @@ void Renderer::requestShaderReload()
 {
 	switch (renderType)
 	{
-	case PathTracer: rayMarcherComputeShader.reload(); break;
+	case Raymarcher: rayMarcherComputeShader.reload(); break;
 	case Rasterizer: rasterizerShader.reload(); break;
 	}
 }
@@ -247,11 +258,11 @@ void Renderer::updateResolution()
 
 	glActiveTexture(GL_TEXTURE0);
 	//glBindTexture(GL_TEXTURE_2D, textureOutput);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, windowWidth, windowHeight, 0, GL_RGBA, GL_FLOAT,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, windowWidth*MSAALevel, windowHeight*MSAALevel, 0, GL_RGBA, GL_FLOAT,
 		NULL);
 	
-	camera.windowWidth = windowWidth;
-	camera.windowHeight = windowHeight;
+	camera.windowWidth = windowWidth*MSAALevel;
+	camera.windowHeight = windowHeight*MSAALevel;
 	render();
 
 }

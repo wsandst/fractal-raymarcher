@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 
 	int frameCount = 0;
 	
-	renderer.renderType = renderer.PathTracer;
+	renderer.renderType = renderer.Raymarcher;
 	renderer.init();
 
 	auto begin = std::chrono::system_clock::now();

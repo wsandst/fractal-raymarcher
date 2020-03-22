@@ -45,6 +45,32 @@ void InputHandler::handleInput(float deltaTime)
 				std::cout << "Reloading Shaders" << "\n";
 				renderer.requestShaderReload();
 				break;
+			//Raymarching
+			case SDLK_1: //Increase power
+				renderer.power += 0.1;
+				std::cout << "Power: " << renderer.power << "\n";
+				break;
+			case SDLK_2: //Decrease power
+				renderer.power -= 0.1;
+				std::cout << "Power: " << renderer.power << "\n";
+				break;
+			case SDLK_3: //Increase iterations
+				renderer.iterations += 10;
+				std::cout << "Iterations: " << renderer.iterations << "\n";
+				break;
+			case SDLK_4: //Decrease iterations
+				std::cout << "Power: " << renderer.iterations << "\n";
+				renderer.iterations -= 10;
+				break;
+			case SDLK_5: //Increase maxRaySteps
+				std::cout << "MaxRaySteps: " << renderer.maxRaySteps << "\n";
+				renderer.maxRaySteps += 10;
+				break;
+			case SDLK_6: //Decrease power
+				std::cout << "MaxRaySteps: " << renderer.maxRaySteps << "\n";
+				renderer.maxRaySteps -= 10;
+				break;
+
 			case SDLK_F9: //Print camera position
 				std::cout << "Camera pos: x: " << camera.getPosition().x << " y: " << camera.getPosition().y << " z: " << camera.getPosition().z << "\n";
 				break;
@@ -122,7 +148,7 @@ void InputHandler::handleInput(float deltaTime)
 			break;
 		}
 	}
-
+	//renderer.power += 0.01;
 	camera.move();
 }
 

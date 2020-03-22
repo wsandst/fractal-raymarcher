@@ -30,7 +30,7 @@ uniform float POWER = 8.0;
 uniform float ITERATIONS = 500;
 uniform float MAX_RAY_STEPS = 1000;
 
-#define MINIMUM_DISTANCE 0.001
+#define MINIMUM_DISTANCE 0.0001
 #define SCALE 20.0
 #define SIERPINSKI_ITERATIONS 5
 
@@ -42,11 +42,17 @@ uniform float MAX_RAY_STEPS = 1000;
 const vec3 sunLightColor = vec3(1.0, 1.0, 1.0); 
 const vec3 sunLight = normalize(vec3(1.0, 1.0, 1.0)); //Direction for the sunlight
 
-const vec4 skyColor = {0.5, 0.7, 0.9, 1.0};
+const vec4 skyColor = {0.3, 0.7, 0.9, 1.0};
 
-vec3 xDir = {1.0, 0, 0};
-vec3 yDir = {0, 1.0, 0};
-vec3 zDir = {0, 0, 1.0};
+//Orbit coloring
+const vec4 colorHigh = {0.3, 1.0, 0.3, 1.0};//{0.0, 0.7, 1.0, 1.0};//{0.4, 0.7, 0.8, 1.0};
+const vec4 colorLow = {0.4, 0.2, 0.1, 1.0};//{0.4, 0.7, 0.8, 1.0};
+const float distanceMax = 1.0;
+const float distanceMin = 0.7;
+
+const vec3 xDir = {1.0, 0, 0};
+const vec3 yDir = {0, 1.0, 0};
+const vec3 zDir = {0, 0, 1.0};
 
 //Support structs
 struct rayObj
@@ -55,14 +61,7 @@ struct rayObj
   vec3 ori;
 };
 
-struct hitRecord
-{
-  float t; //Distance along ray
-  int objType; //Box 1, Sphere 2
-  material mat;
-  vec3 normal;
-};
-
+//Helper functions
 bool fuzzy_equals(float a, float b)
 {
   if (abs(a - b) < FLOAT_COMPARISON_PRECISION) return true;
@@ -87,31 +86,15 @@ vec3 getRayPos(rayObj ray, float t)
   return ray.ori + ray.dir * t;
 }
 
-vec4 calculateLight(vec3 normal, vec3 dir, vec3 pos)
-{ //Direction for the sunlight
-    // ambient
-    vec3 ambient = AMBIENT_STRENGTH * sunLightColor;
-  	
-    // diffuse 
-    float diff = max(dot(normal, sunLight), 0.0);
-    vec3 diffuse = diff * sunLightColor;
-    
-    // specular
-    vec3 reflectDir = reflect(sunLight, normal);  
-    float spec = pow(max(dot(dir, reflectDir), 0.0), 32);
-    vec3 specular = SPECULAR_STRENGTH * spec * sunLightColor;
+//Distance estimators
 
-    return vec4(diffuse + specular + ambient, 1.0);
-
-}
-
-float mandelbulbDistanceEst(vec3 pos, out int iterations) {
+float mandelbulbDistanceEst(vec3 pos, out float distance) {
 	vec3 z = pos;
 	float dr = 1.0;
 	float r = 0.0;
-  int i;
-	for (i = 0; i < ITERATIONS ; i++) {
+	for (int i = 0; i < ITERATIONS ; i++) {
 		r = length(z);
+    distance = min(distance, r);
 		if (r>BAILOUT) break;
 		
 		// convert to polar coordinates
@@ -128,7 +111,6 @@ float mandelbulbDistanceEst(vec3 pos, out int iterations) {
 		z = zr*vec3(sin(theta)*cos(phi), sin(phi)*sin(theta), cos(theta));
 		z+=pos;
 	}
-  iterations = i;
 	return 0.5*log(r)*r/dr;
 }
 
@@ -153,29 +135,54 @@ float sphereDistanceEst(vec3 p)
   return length(p)-0.3;
 }
 
+float distanceEst(vec3 pos, out float distance)
+{
+  return mandelbulbDistanceEst(pos, distance);
+}
+
+//Lightning calculations
+
+vec4 calculateLight(vec3 normal, vec3 dir, vec3 pos)
+{ //Direction for the sunlight
+    // ambient
+    vec3 ambient = AMBIENT_STRENGTH * sunLightColor;
+  	
+    // diffuse 
+    float diff = max(dot(normal, sunLight), 0.0);
+    vec3 diffuse = diff * sunLightColor;
+    
+    // specular
+    vec3 reflectDir = reflect(sunLight, normal);  
+    float spec = pow(max(dot(dir, reflectDir), 0.0), 32);
+    vec3 specular = SPECULAR_STRENGTH * spec * sunLightColor;
+
+    return vec4(diffuse + specular + ambient, 1.0);
+
+}
+
 vec3 findNormal(vec3 pos)
 {
     vec3 normal;
-    int iterations;
-    normal.x = mandelbulbDistanceEst(pos+xDir*MINIMUM_DISTANCE, iterations)-mandelbulbDistanceEst(pos-xDir*MINIMUM_DISTANCE, iterations);
-    normal.y = mandelbulbDistanceEst(pos+yDir*MINIMUM_DISTANCE, iterations)-mandelbulbDistanceEst(pos-yDir*MINIMUM_DISTANCE, iterations);
-    normal.z = mandelbulbDistanceEst(pos+zDir*MINIMUM_DISTANCE, iterations)-mandelbulbDistanceEst(pos-zDir*MINIMUM_DISTANCE, iterations);
+    float orbitDistance;
+    normal.x = distanceEst(pos+xDir*MINIMUM_DISTANCE, orbitDistance)-distanceEst(pos-xDir*MINIMUM_DISTANCE, orbitDistance);
+    normal.y = distanceEst(pos+yDir*MINIMUM_DISTANCE, orbitDistance)-distanceEst(pos-yDir*MINIMUM_DISTANCE, orbitDistance);
+    normal.z = distanceEst(pos+zDir*MINIMUM_DISTANCE, orbitDistance)-distanceEst(pos-zDir*MINIMUM_DISTANCE, orbitDistance);
     return normalize(normal);
 }
 
-vec4 colorFractal(vec4 color, int iterations)
+vec4 colorOrbit(vec4 colorHigh, vec4 colorLow, float distance)
 {
-    color.b = 1 - float(iterations) / ITERATIONS;
-    return color;
+    distance = (distance - distanceMin) / (distanceMax - distanceMin);
+    return mix(colorLow, colorHigh, clamp(distance, 0.0, 1.0));
 }
 
-vec4 trace(rayObj ray) {
+//Main march function
+vec4 march(rayObj ray) {
   int steps;
   bool hit = false;
-  int iterations;
-  vec4 color = {0.4, 0.7, 0.8, 1.0};
+  float dist = 100000;
 	for (steps = 0; steps < MAX_RAY_STEPS; steps++) {
-		float distance = mandelbulbDistanceEst(ray.ori, iterations);
+		float distance = distanceEst(ray.ori, dist);
 		ray.ori += distance * ray.dir;
 		if (distance < MINIMUM_DISTANCE) 
     {
@@ -185,10 +192,9 @@ vec4 trace(rayObj ray) {
 	}
 
   if (hit)
-    return color * calculateLight(findNormal(ray.ori), ray.dir, ray.ori);
+    return colorOrbit(colorHigh, colorLow, dist) * calculateLight(findNormal(ray.ori), ray.dir, ray.ori);
   else
     return skyColor;
-	//return (1.0 - float(steps)/float(MAX_RAY_STEPS));
 }
 
 layout (local_size_x = 16, local_size_y = 8) in;
@@ -201,6 +207,6 @@ void main(void) {
   vec2 pos = vec2(pix) / vec2(size.x - 1, size.y - 1);
   vec3 dir = normalize(mix(mix(ray00, ray01, pos.y), mix(ray10, ray11, pos.y), pos.x));
   rayObj ray = rayObj(dir, eye);
-  vec4 color = trace(ray);
+  vec4 color = march(ray);
   imageStore(framebuffer, pix, color);
 }

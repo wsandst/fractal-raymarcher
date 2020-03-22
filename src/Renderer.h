@@ -25,7 +25,7 @@ public:
 	int screenResHeight, screenResWidth;
 	bool isFullScreen = false;
 	bool borderlessFullScreen = false;
-	const int MSAALevel = 1; //MS Antialiasing: 1 for none, 2 for 4x, 4 for 16x
+	const int MSAALevel = 2; //MS Antialiasing: 1 for none, 2 for 4x, 4 for 16x
 
 	//Raymarching variables
 	float bailout = 2.0, power = 8.0, iterations = 400, maxRaySteps = 500;
